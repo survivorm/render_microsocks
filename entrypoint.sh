@@ -13,37 +13,41 @@ if [ -z "$TAILSCALE_AUTHKEY" ]; then
   exit 1
 fi
 
-# --- Запуск Tailscale ---
-echo "Starting Tailscale daemon (tailscaled)..."
-# Запускаем демона в фоне. Флаг --state=mem: указывает хранить состояние в памяти (важно для Render)
-tailscaled --state=mem: &
+# --- Запуск Tailscale в Userspace режиме ---
+echo "Starting Tailscale daemon (tailscaled) in userspace mode..."
+# Добавляем --tun=userspace-networking
+tailscaled --state=mem: --tun=userspace-networking &
 TAILSCALED_PID=$!
 
-# Даем демону время запуститься
-sleep 5
+# Даем демону больше времени запуститься, userspace может быть медленнее
+sleep 10
 
-echo "Connecting to Tailscale network (tailscale up)..."
-# Подключаемся к сети, используя Auth Key.
-# --hostname=render-proxy : Устанавливаем имя хоста в сети Tailscale
-# --accept-routes=false : Обычно не нужно принимать маршруты для простого узла/прокси
-tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=render-proxy --accept-routes=false
+echo "Connecting to Tailscale network (tailscale up) using userspace mode..."
+# Добавляем --tun=userspace-networking
+tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=render-proxy --accept-routes=false --tun=userspace-networking
 TS_UP_EXIT_CODE=$?
 
+# Проверяем код возврата 'tailscale up'
 if [ $TS_UP_EXIT_CODE -ne 0 ]; then
   echo "Ошибка: tailscale up завершился с кодом $TS_UP_EXIT_CODE. Проверьте Auth Key и логи."
-  exit 1
+  # В userspace режиме ошибки могут быть не критичными для основной функции,
+  # поэтому НЕ выходим сразу, дадим шанс microsocks запуститься.
+  # exit 1
 fi
 
-echo "Tailscale connected successfully."
-# Можно добавить вывод IP: tailscale ip -4
+echo "Tailscale 'up' command finished. Checking status..."
+# Даем время статусу обновиться
+sleep 5
+# Выводим статус и IP для диагностики
+tailscale status || echo "Предупреждение: Не удалось получить статус Tailscale."
+tailscale ip -4 || echo "Предупреждение: Не удалось получить Tailscale IPv4."
 
 # Даем сети время стабилизироваться
 sleep 3
 
 # --- Запуск microsocks ---
+# Слушаем на всех интерфейсах, чтобы поймать и Tailscale IP
 echo "Starting microsocks on 0.0.0.0:1080 (with auth)..."
-# Слушаем на всех интерфейсах (0.0.0.0), включая Tailscale IP.
-# Возвращаем аутентификацию, т.к. теперь доступ к порту будет только через защищенную сеть Tailscale.
 exec /usr/local/bin/microsocks -p 1080
 
 # Если exec не сработает или microsocks упадет, контейнер завершится.
