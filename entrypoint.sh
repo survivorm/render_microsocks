@@ -1,35 +1,40 @@
 #!/bin/sh
 
-# Создаем простую директорию и файл для веб-сервера
+# --- Настройка Health Check сервера (для Render) ---
 mkdir -p /www/healthz
 echo "OK" > /www/healthz/index.html
-
 echo "Starting darkhttpd server for health checks on port 8080..."
-# Запускаем darkhttpd в фоне
-# --port 8080 : указываем порт
-# --chroot /www : указываем корневую папку для файлов
-# --daemon : запускаем в фоне (daemonize)
-# --log /dev/stdout : пишем логи в stdout (может потребоваться или нет, попробуем без него сначала)
-# Важно: darkhttpd по умолчанию слушает на 0.0.0.0
-# Используем --no-daemon чтобы он оставался на переднем плане, если запущен не через &
-# Поэтому запускаем через & чтобы он ушел в фон
 darkhttpd /www --port 8080 &
+DARKHTTPD_PID=$!
 
-
-# Добавляем небольшую паузу, чтобы httpd успел запуститься (опционально)
-sleep 2
-
-
-echo "--- Checking Environment Variables ---"
-echo "PROXY_USER: [${PROXY_USER}]"
-# Для пароля выведем только информацию о том, установлен он или нет, чтобы не светить его в логах
-if [ -n "$PROXY_PASSWORD" ]; then
-  echo "PROXY_PASSWORD: [set]"
-else
-  echo "PROXY_PASSWORD: [NOT SET or EMPTY!]"
+# --- Проверка наличия токена туннеля ---
+if [ -z "$TUNNEL_TOKEN" ]; then
+  echo "Ошибка: Переменная окружения TUNNEL_TOKEN не установлена!"
+  exit 1
 fi
-echo "------------------------------------"
 
-echo "Starting microsocks on port 1080 (NO AUTHENTICATION - FOR TEST ONLY)..."
-# Убираем аргументы -u и -P
-exec /usr/local/bin/microsocks -p 1080
+# --- Запуск microsocks в фоне ---
+# Важно: Заставляем слушать ТОЛЬКО на localhost (127.0.0.1),
+# так как подключаться к нему будет только cloudflared из этого же контейнера.
+#echo "Starting microsocks on 127.0.0.1:1080 (with auth)..."
+#/usr/local/bin/microsocks -i 127.0.0.1 -p 1080 -u "$PROXY_USER" -P "$PROXY_PASSWORD" &
+echo "Starting microsocks on 127.0.0.1:1080 (no auth)..."
+/usr/local/bin/microsocks -i 127.0.0.1 -p 1080 &
+MICROSOCKS_PID=$!
+
+# Даем microsocks время запуститься
+sleep 3
+
+# --- Запуск Cloudflare Tunnel Connector ---
+# Запускаем cloudflared на переднем плане через exec, чтобы он был основным процессом.
+# Он подключится к Cloudflare используя токен и будет ждать входящих туннельных соединений.
+# Флаг --url указывает cloudflared, куда перенаправлять TCP-трафик, приходящий через туннель.
+echo "Starting Cloudflare Tunnel connector..."
+exec cloudflared tunnel --no-autoupdate --url tcp://127.0.0.1:1080 run --token "$TUNNEL_TOKEN"
+
+# Если exec не сработает или cloudflared упадет, контейнер завершится.
+# Строки ниже не должны выполниться при нормальной работе.
+echo "Cloudflared tunnel exited."
+# Можно добавить ожидание фоновых процессов для чистого завершения, но exec обычно достаточно.
+# wait $DARKHTTPD_PID
+# wait $MICROSOCKS_PID

@@ -8,10 +8,10 @@ RUN cd /opt/microsocks && \
 # --- Этап 2: Финальный образ ---
 FROM alpine:latest
 
-# Устанавливаем darkhttpd для health check, busybox и другие зависимости.
+# Устанавливаем darkhttpd (для Render health check), cloudflared, busybox и другие зависимости.
 RUN apk update && \
-    apk add --no-cache darkhttpd busybox libc6-compat && \
-    echo "Установка darkhttpd завершена." && \
+    apk add --no-cache darkhttpd cloudflared busybox libc6-compat && \
+    echo "Установка пакетов завершена." && \
     rm -rf /var/cache/apk/*
 
 # Копируем скомпилированный microsocks из этапа сборщика
@@ -22,13 +22,14 @@ RUN chmod +x /usr/local/bin/microsocks
 COPY entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Переменные окружения для microsocks
+# Переменные окружения для microsocks И Cloudflare Tunnel
 ENV PROXY_USER="default_user"
 ENV PROXY_PASSWORD="default_password"
+ENV TUNNEL_TOKEN="" # Для токена Cloudflare Tunnel
 
-# Открываем ОБА порта: 1080 для SOCKS, 8080 для Health Check HTTP
-EXPOSE 1080
-EXPOSE 8080
+# Открываем порты (для справки и health check)
+EXPOSE 1080 # Порт microsocks (будет доступен только через туннель)
+EXPOSE 8080 # Порт darkhttpd (для Render health check)
 
 # Используем ENTRYPOINT для запуска нашего скрипта
 ENTRYPOINT ["/entrypoint.sh"]
