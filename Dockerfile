@@ -8,13 +8,10 @@ RUN cd /opt/microsocks && \
 # --- Этап 2: Финальный образ ---
 FROM alpine:latest
 
-# Устанавливаем busybox, ПАКЕТ busybox-httpd, и другие зависимости.
-# Пакет busybox-httpd должен предоставить нужный апплет.
+# Устанавливаем darkhttpd для health check, busybox и другие зависимости.
 RUN apk update && \
-    apk add --no-cache busybox busybox-httpd libc6-compat && \
-    # Теперь можно убрать проверку, т.к. пакет busybox-httpd должен гарантировать наличие httpd.
-    # Если этот пакет не найдется, ошибка будет на этапе 'apk add'.
-    echo "Установка busybox-httpd завершена." && \
+    apk add --no-cache darkhttpd busybox libc6-compat && \
+    echo "Установка darkhttpd завершена." && \
     rm -rf /var/cache/apk/*
 
 # Копируем скомпилированный microsocks из этапа сборщика
@@ -32,7 +29,6 @@ ENV PROXY_PASSWORD="default_password"
 # Открываем ОБА порта: 1080 для SOCKS, 8080 для Health Check HTTP
 EXPOSE 1080
 EXPOSE 8080
-
 
 # Используем ENTRYPOINT для запуска нашего скрипта
 ENTRYPOINT ["/entrypoint.sh"]
