@@ -15,24 +15,23 @@ fi
 
 # --- Запуск Tailscale в Userspace режиме ---
 echo "Starting Tailscale daemon (tailscaled) in userspace mode..."
-# Добавляем --tun=userspace-networking
+# Флаг --tun=userspace-networking нужен ЗДЕСЬ
 tailscaled --state=mem: --tun=userspace-networking &
 TAILSCALED_PID=$!
 
-# Даем демону больше времени запуститься, userspace может быть медленнее
+# Даем демону время запуститься
 sleep 10
 
-echo "Connecting to Tailscale network (tailscale up) using userspace mode..."
-# Добавляем --tun=userspace-networking
-tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=render-proxy --accept-routes=false --tun=userspace-networking
+echo "Connecting to Tailscale network (tailscale up)..."
+# Убираем флаг --tun=userspace-networking ОТСЮДА
+tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=render-proxy --accept-routes=false
 TS_UP_EXIT_CODE=$?
 
 # Проверяем код возврата 'tailscale up'
 if [ $TS_UP_EXIT_CODE -ne 0 ]; then
   echo "Ошибка: tailscale up завершился с кодом $TS_UP_EXIT_CODE. Проверьте Auth Key и логи."
-  # В userspace режиме ошибки могут быть не критичными для основной функции,
-  # поэтому НЕ выходим сразу, дадим шанс microsocks запуститься.
-  # exit 1
+  # Можно снова добавить exit 1, если 'up' должен обязательно пройти успешно
+  exit 1
 fi
 
 echo "Tailscale 'up' command finished. Checking status..."
@@ -52,6 +51,3 @@ exec /usr/local/bin/microsocks -p 1080
 
 # Если exec не сработает или microsocks упадет, контейнер завершится.
 echo "Microsocks exited."
-# Опционально: можно остановить фоновые процессы при выходе
-# kill $TAILSCALED_PID
-# kill $DARKHTTPD_PID
