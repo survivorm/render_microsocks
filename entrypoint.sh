@@ -21,4 +21,4 @@ sleep 2
 
 echo "Starting microsocks on port 1080..."
 # Запускаем microsocks на переднем плане
-exec /usr/local/bin/microsocks -p 1080 -u "$PROXY_USER" -P "$PROXY_PASSWORD"
+exec /usr/local/bin/microsocks -v -p 1080 -u "$PROXY_USER" -P "$PROXY_PASSWORD"
