@@ -19,6 +19,17 @@ darkhttpd /www --port 8080 &
 # Добавляем небольшую паузу, чтобы httpd успел запуститься (опционально)
 sleep 2
 
+
+echo "--- Checking Environment Variables ---"
+echo "PROXY_USER: [${PROXY_USER}]"
+# Для пароля выведем только информацию о том, установлен он или нет, чтобы не светить его в логах
+if [ -n "$PROXY_PASSWORD" ]; then
+  echo "PROXY_PASSWORD: [set]"
+else
+  echo "PROXY_PASSWORD: [NOT SET or EMPTY!]"
+fi
+echo "------------------------------------"
+
 echo "Starting microsocks on port 1080..."
 # Запускаем microsocks на переднем плане
-exec /usr/local/bin/microsocks -v -p 1080 -u "$PROXY_USER" -P "$PROXY_PASSWORD"
+exec /usr/local/bin/microsocks -p 1080 -u "$PROXY_USER" -P "$PROXY_PASSWORD"
