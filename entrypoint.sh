@@ -7,34 +7,47 @@ echo "Starting darkhttpd server for health checks on port 8080..."
 darkhttpd /www --port 8080 &
 DARKHTTPD_PID=$!
 
-# --- Проверка наличия токена туннеля ---
-if [ -z "$TUNNEL_TOKEN" ]; then
-  echo "Ошибка: Переменная окружения TUNNEL_TOKEN не установлена!"
+# --- Проверка наличия ключа Tailscale ---
+if [ -z "$TAILSCALE_AUTHKEY" ]; then
+  echo "Ошибка: Переменная окружения TAILSCALE_AUTHKEY не установлена!"
   exit 1
 fi
 
-# --- Запуск microsocks в фоне ---
-# Важно: Заставляем слушать ТОЛЬКО на localhost (127.0.0.1),
-# так как подключаться к нему будет только cloudflared из этого же контейнера.
-#echo "Starting microsocks on 127.0.0.1:1080 (with auth)..."
-#/usr/local/bin/microsocks -i 127.0.0.1 -p 1080 -u "$PROXY_USER" -P "$PROXY_PASSWORD" &
-echo "Starting microsocks on 127.0.0.1:1080 (no auth)..."
-/usr/local/bin/microsocks -i 127.0.0.1 -p 1080 &
-MICROSOCKS_PID=$!
+# --- Запуск Tailscale ---
+echo "Starting Tailscale daemon (tailscaled)..."
+# Запускаем демона в фоне. Флаг --state=mem: указывает хранить состояние в памяти (важно для Render)
+tailscaled --state=mem: &
+TAILSCALED_PID=$!
 
-# Даем microsocks время запуститься
+# Даем демону время запуститься
+sleep 5
+
+echo "Connecting to Tailscale network (tailscale up)..."
+# Подключаемся к сети, используя Auth Key.
+# --hostname=render-proxy : Устанавливаем имя хоста в сети Tailscale
+# --accept-routes=false : Обычно не нужно принимать маршруты для простого узла/прокси
+tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=render-proxy --accept-routes=false
+TS_UP_EXIT_CODE=$?
+
+if [ $TS_UP_EXIT_CODE -ne 0 ]; then
+  echo "Ошибка: tailscale up завершился с кодом $TS_UP_EXIT_CODE. Проверьте Auth Key и логи."
+  exit 1
+fi
+
+echo "Tailscale connected successfully."
+# Можно добавить вывод IP: tailscale ip -4
+
+# Даем сети время стабилизироваться
 sleep 3
 
-# --- Запуск Cloudflare Tunnel Connector ---
-# Запускаем cloudflared на переднем плане через exec, чтобы он был основным процессом.
-# Он подключится к Cloudflare используя токен и будет ждать входящих туннельных соединений.
-# Флаг --url указывает cloudflared, куда перенаправлять TCP-трафик, приходящий через туннель.
-echo "Starting Cloudflare Tunnel connector..."
-exec cloudflared tunnel --no-autoupdate --url tcp://127.0.0.1:1080 run --token "$TUNNEL_TOKEN"
+# --- Запуск microsocks ---
+echo "Starting microsocks on 0.0.0.0:1080 (with auth)..."
+# Слушаем на всех интерфейсах (0.0.0.0), включая Tailscale IP.
+# Возвращаем аутентификацию, т.к. теперь доступ к порту будет только через защищенную сеть Tailscale.
+exec /usr/local/bin/microsocks -p 1080
 
-# Если exec не сработает или cloudflared упадет, контейнер завершится.
-# Строки ниже не должны выполниться при нормальной работе.
-echo "Cloudflared tunnel exited."
-# Можно добавить ожидание фоновых процессов для чистого завершения, но exec обычно достаточно.
-# wait $DARKHTTPD_PID
-# wait $MICROSOCKS_PID
+# Если exec не сработает или microsocks упадет, контейнер завершится.
+echo "Microsocks exited."
+# Опционально: можно остановить фоновые процессы при выходе
+# kill $TAILSCALED_PID
+# kill $DARKHTTPD_PID

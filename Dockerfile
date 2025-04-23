@@ -8,20 +8,10 @@ RUN cd /opt/microsocks && \
 # --- Этап 2: Финальный образ ---
 FROM alpine:latest
 
-# Устанавливаем curl (для скачивания cloudflared), darkhttpd, busybox и другие зависимости.
-# Удаляем cloudflared из apk add
+# Устанавливаем tailscale, darkhttpd (для health check Render), busybox, и другие зависимости.
 RUN apk update && \
-    apk add --no-cache curl darkhttpd busybox libc6-compat && \
-    echo "Установка базовых пакетов завершена." && \
-    # Скачиваем последнюю версию cloudflared для linux-amd64
-    echo "Скачивание cloudflared..." && \
-    curl -L --output /usr/local/bin/cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 && \
-    # Делаем скачанный файл исполняемым
-    chmod +x /usr/local/bin/cloudflared && \
-    # Проверяем версию (опционально, для лога)
-    echo "cloudflared версия:" && \
-    cloudflared --version && \
-    # Очищаем кэш apk
+    apk add --no-cache tailscale darkhttpd busybox libc6-compat && \
+    echo "Установка пакетов завершена." && \
     rm -rf /var/cache/apk/*
 
 # Копируем скомпилированный microsocks из этапа сборщика
@@ -34,10 +24,10 @@ RUN chmod +x /entrypoint.sh
 
 # Переменные окружения
 ENV PROXY_USER="default_user"
-ENV PROPY_PASSWORD="default_password"
-ENV TUNNEL_TOKEN="ttt"
+ENV PROXY_PASSWORD="default_password"
+ENV TAILSCALE_AUTHKEY="fff"
 
-# Открываем порты
+# Открываем порты (1080 для microsocks, 8080 для health check)
 EXPOSE 1080
 EXPOSE 8080
 
