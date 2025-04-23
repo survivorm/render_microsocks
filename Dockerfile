@@ -8,9 +8,17 @@ RUN cd /opt/microsocks && \
 # --- Этап 2: Финальный образ ---
 FROM alpine:latest
 
-# Устанавливаем busybox (включая httpd) и bash (для удобства, хотя sh хватит)
-# libc6-compat может понадобиться для некоторых статически скомпилированных бинарников, добавим на всякий случай
-RUN apk update && apk add --no-cache busybox libc6-compat && rm -rf /var/cache/apk/*
+# Устанавливаем busybox, включая httpd, и другие зависимости.
+# Мы добавим проверку наличия httpd прямо во время сборки.
+RUN apk update && \
+    apk add --no-cache busybox libc6-compat && \
+    # Проверяем, что httpd действительно доступен после установки busybox.
+    # Эта команда завершит сборку с ошибкой, если httpd не найден.
+    echo "Проверка наличия httpd в busybox..." && \
+    busybox --list | grep -q -w 'httpd' || \
+      (echo "Ошибка: httpd не найден в busybox!" && exit 1) && \
+    echo "httpd найден." && \
+    rm -rf /var/cache/apk/*
 
 # Копируем скомпилированный microsocks из этапа сборщика
 COPY --from=builder /opt/microsocks/microsocks /usr/local/bin/microsocks
@@ -30,5 +38,4 @@ EXPOSE 8080
 
 # Используем ENTRYPOINT для запуска нашего скрипта
 ENTRYPOINT ["/entrypoint.sh"]
-
 # CMD больше не нужен, так как ENTRYPOINT переопределяет его
