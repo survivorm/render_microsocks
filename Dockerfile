@@ -33,5 +33,6 @@ ENV PROXY_PASSWORD="default_password"
 EXPOSE 1080
 EXPOSE 8080
 
+
 # Используем ENTRYPOINT для запуска нашего скрипта
 ENTRYPOINT ["/entrypoint.sh"]
