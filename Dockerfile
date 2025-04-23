@@ -8,9 +8,9 @@ RUN cd /opt/microsocks && \
 # --- Этап 2: Финальный образ ---
 FROM alpine:latest
 
-# Устанавливаем tailscale, darkhttpd (для health check Render), busybox, и другие зависимости.
+# Устанавливаем tailscale, darkhttpd, busybox, bind-tools (для nslookup) и curl (для теста)
 RUN apk update && \
-    apk add --no-cache tailscale darkhttpd busybox libc6-compat && \
+    apk add --no-cache tailscale darkhttpd busybox bind-tools curl libc6-compat && \
     echo "Установка пакетов завершена." && \
     rm -rf /var/cache/apk/*
 
