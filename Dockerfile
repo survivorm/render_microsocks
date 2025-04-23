@@ -25,11 +25,11 @@ RUN chmod +x /entrypoint.sh
 # Переменные окружения для microsocks И Cloudflare Tunnel
 ENV PROXY_USER="default_user"
 ENV PROXY_PASSWORD="default_password"
-ENV TUNNEL_TOKEN="" # Для токена Cloudflare Tunnel
+ENV TUNNEL_TOKEN="ttt"
 
 # Открываем порты (для справки и health check)
-EXPOSE 1080 # Порт microsocks (будет доступен только через туннель)
-EXPOSE 8080 # Порт darkhttpd (для Render health check)
+EXPOSE 1080
+EXPOSE 8080
 
 # Используем ENTRYPOINT для запуска нашего скрипта
 ENTRYPOINT ["/entrypoint.sh"]
