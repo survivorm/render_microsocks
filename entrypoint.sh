@@ -76,10 +76,9 @@ echo "Temporary tailscaled stopped."
 set +e
 
 # --- Запуск Supervisord ---
-# Он прочитает supervisord.conf и запустит все настроенные программы
-# Используем exec, чтобы supervisord стал основным процессом контейнера (PID 1)
+# Указываем СТАНДАРТНЫЙ путь к конфигу
 echo "Setup complete. Handing control over to supervisord..."
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf -n
+exec /usr/bin/supervisord -c /etc/supervisord.conf -n
 
 # Этот код ниже никогда не должен выполниться, если exec сработал
 echo "ERROR: Supervisord failed to start!"

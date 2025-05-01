@@ -40,5 +40,12 @@ ENV TAILSCALE_AUTHKEY="fff"
 EXPOSE 1080
 EXPOSE 8080
 
-# Используем ENTRYPOINT для запуска нашего скрипта
+# Копируем конфигурационный файл supervisord В СТАНДАРТНОЕ МЕСТО
+COPY supervisord.conf /etc/supervisord.conf
+
+# Копируем наш модифицированный entrypoint скрипт
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Указываем, что контейнер будет запускаться через наш entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
