@@ -8,14 +8,19 @@ RUN cd /opt/microsocks && \
 # --- Этап 2: Финальный образ ---
 FROM alpine:latest
 
-# Устанавливаем tailscale, darkhttpd, busybox, bind-tools (для nslookup) и curl (для теста)
-RUN apk update && apk add --no-cache \
-    supervisor \
-    curl \
-    darkhttpd \
-    tailscale \
-    bash # bash может быть полезен для скриптов
+# устанавливаем tailscale, darkhttpd, busybox, bind-tools (для nslookup) и curl (для теста)
+RUN apk update && \
+    apk add --no-cache \
+        supervisor \
+        curl \
+        darkhttpd \
+        tailscale \
+        bash && \
+        busybox \
+        bind-tools \
+        libc6-compat \
     echo "Установка пакетов завершена." && \
+    # Очищаем кэш apk после успешной установки
     rm -rf /var/cache/apk/*
 
 # Копируем скомпилированный microsocks из этапа сборщика
