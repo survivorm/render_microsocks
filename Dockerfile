@@ -9,8 +9,12 @@ RUN cd /opt/microsocks && \
 FROM alpine:latest
 
 # Устанавливаем tailscale, darkhttpd, busybox, bind-tools (для nslookup) и curl (для теста)
-RUN apk update && \
-    apk add --no-cache tailscale darkhttpd busybox bind-tools curl libc6-compat && \
+RUN apk update && apk add --no-cache \
+    supervisor \
+    curl \
+    darkhttpd \
+    tailscale \
+    bash # bash может быть полезен для скриптов
     echo "Установка пакетов завершена." && \
     rm -rf /var/cache/apk/*
 
