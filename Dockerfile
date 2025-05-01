@@ -18,7 +18,7 @@ RUN apk update && \
         bash && \
         busybox \
         bind-tools \
-        libc6-compat \
+        libc6-compat
     echo "Установка пакетов завершена." && \
     # Очищаем кэш apk после успешной установки
     rm -rf /var/cache/apk/*
