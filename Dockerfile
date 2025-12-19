@@ -43,9 +43,10 @@ EXPOSE 8080
 # Копируем конфигурационный файл supervisord В СТАНДАРТНОЕ МЕСТО
 COPY supervisord.conf /etc/supervisord.conf
 
-# Копируем наш модифицированный entrypoint скрипт
+# Копируем скрипты
 COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY ts-auth.sh /usr/local/bin/ts-auth.sh
+RUN chmod +x /entrypoint.sh /usr/local/bin/ts-auth.sh
 
 # Указываем, что контейнер будет запускаться через наш entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
