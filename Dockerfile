@@ -27,10 +27,6 @@ RUN apk update && \
 COPY --from=builder /opt/microsocks/microsocks /usr/local/bin/microsocks
 RUN chmod +x /usr/local/bin/microsocks
 
-# Копируем наш скрипт запуска
-COPY entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 # Переменные окружения
 ENV PROXY_USER="default_user"
 ENV PROXY_PASSWORD="default_password"
@@ -47,6 +43,10 @@ COPY supervisord.conf /etc/supervisord.conf
 COPY entrypoint.sh /entrypoint.sh
 COPY ts-auth.sh /usr/local/bin/ts-auth.sh
 RUN chmod +x /entrypoint.sh /usr/local/bin/ts-auth.sh
+
+# Создаем директорию для статики и файл для Health Check
+RUN mkdir -p /www/healthz && \
+    echo "ok" > /www/healthz/index.html
 
 # Указываем, что контейнер будет запускаться через наш entrypoint
 ENTRYPOINT ["/entrypoint.sh"]
