@@ -28,7 +28,7 @@ sleep 10 # Или более надежная проверка: while [ ! -S /va
 echo "Connecting to Tailscale network (tailscale up)..."
 # Используем --accept-dns=false, если не хотим использовать DNS Tailscale
 # Используем --netfilter-mode=off (или userspace?), если возникают проблемы с userspace-networking туннелем
-tailscale up --authkey="${TAILSCALE_AUTHKEY}" --hostname=render-proxy --accept-routes=false --accept-dns=false --netfilter-mode=off
+tailscale up --force-reauth --authkey="${TAILSCALE_AUTHKEY}" --hostname=render-proxy --accept-routes=false --accept-dns=false --netfilter-mode=off
 TS_UP_EXIT_CODE=$?
 if [ $TS_UP_EXIT_CODE -ne 0 ]; then
   echo "Ошибка: tailscale up завершился с кодом $TS_UP_EXIT_CODE."
