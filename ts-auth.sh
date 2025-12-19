@@ -26,14 +26,14 @@ fi
 
 echo "Running tailscale up..."
 # Добавляем --reset для очистки старых попыток
+echo "Running tailscale up..."
 tailscale up \
     --reset \
-    --authkey="${TAILSCALE_AUTHKEY}" \
+    --auth-key="${TAILSCALE_AUTHKEY}" \
     --hostname="render-proxy" \
     --accept-dns=false \
     --accept-routes=false \
     --netfilter-mode=off \
-    --ephemeral
 
 if [ $? -eq 0 ]; then
     echo "=== Tailscale Auth SUCCESS ==="
