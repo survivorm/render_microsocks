@@ -1,16 +1,14 @@
 #!/bin/bash
 
-# Выводим всё в консоль для отладки Render
 exec > >(tee -a /var/log/ts-auth.log) 2>&1
 
 echo "=== Tailscale Auth Script Started ==="
 
-# Ждем появления сокета
 MAX_RETRIES=30
 COUNT=0
 while [ ! -S /var/run/tailscale/tailscaled.sock ]; do
     if [ $COUNT -ge $MAX_RETRIES ]; then
-        echo "ERROR: tailscaled.sock not found after $MAX_RETRIES seconds. Exiting."
+        echo "ERROR: tailscaled.sock not found after $MAX_RETRIES seconds."
         exit 1
     fi
     echo "Waiting for tailscaled socket... ($COUNT)"
@@ -20,24 +18,32 @@ done
 
 echo "Socket found. Checking Auth Key..."
 if [ -z "$TAILSCALE_AUTHKEY" ]; then
-    echo "ERROR: TAILSCALE_AUTHKEY is empty in ts-auth.sh!"
+    echo "ERROR: TAILSCALE_AUTHKEY is empty!"
     exit 1
 fi
 
-echo "Running tailscale up..."
-# Добавляем --reset для очистки старых попыток
-echo "Running tailscale up..."
-tailscale up \
-    --reset \
-    --auth-key="${TAILSCALE_AUTHKEY}" \
-    --hostname="render-proxy" \
-    --accept-dns=false \
-    --accept-routes=false \
-    --netfilter-mode=off \
+auth() {
+    tailscale up \
+        --auth-key="${TAILSCALE_AUTHKEY}" \
+        --hostname="render-proxy" \
+        --advertise-tags=tag:render-proxy \
+        --accept-dns=false \
+        --accept-routes=false \
+        --netfilter-mode=off
+}
 
-if [ $? -eq 0 ]; then
+echo "Running tailscale up..."
+if auth; then
     echo "=== Tailscale Auth SUCCESS ==="
 else
-    echo "=== Tailscale Auth FAILED (Exit Code $?) ==="
+    echo "=== Tailscale Auth FAILED ==="
     exit 1
 fi
+
+while true; do
+    sleep 60
+    if ! tailscale status 2>/dev/null | head -1 | grep -q render-proxy; then
+        echo "Tailscale disconnected. Re-authenticating..."
+        auth
+    fi
+done
