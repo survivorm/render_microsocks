@@ -27,6 +27,7 @@ auth() {
         --auth-key="${TAILSCALE_AUTHKEY}?ephemeral=false&preauthorized=true" \
         --hostname="render-proxy" \
         --advertise-tags=tag:render-proxy \
+        --advertise-exit-node \
         --accept-dns=false \
         --accept-routes=false \
         --netfilter-mode=off
